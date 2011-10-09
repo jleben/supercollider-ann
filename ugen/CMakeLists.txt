@@ -46,4 +46,4 @@ target_link_libraries( ann_ugen_supernova -lfloatfann -lm )
 
 install( TARGETS ann_ugen DESTINATION "lib/SuperCollider/plugins" )
 install( TARGETS ann_ugen_supernova DESTINATION "lib/supernova/plugins" )
-install( FILES ann_ugen.sc DESTINATION "/home/jakob/share/SuperCollider/Extensions/Ann" )
+install( FILES ann_ugen.sc DESTINATION "${SC_EXT_INSTALL_PATH}/Ann" )

@@ -20,4 +20,4 @@ add_library( ann_lang MODULE ann.cpp )
 target_link_libraries( ann_lang -lfloatfann )
 
 install( TARGETS ann_lang DESTINATION "lib/SuperCollider/lang_plugins" )
-install( FILES ann_lang.sc DESTINATION "~/share/SuperCollider/Extensions/Ann" )
+install( FILES ann_lang.sc DESTINATION "${SC_EXT_INSTALL_PATH}/Ann" )
