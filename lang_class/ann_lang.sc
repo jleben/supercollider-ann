@@ -3,8 +3,16 @@ Fann {
 	var struct;
 	var trainer;
 
+	*activationFunctionNames {
+		_Ann_GetActivationFuncNames
+	}
+
 	*new { arg ... structure;
 		^super.new.initAnn( structure );
+	}
+
+	activationFunction_ { arg name, layers=\all; //a symbol, one of *activationFunctionNames
+		_Ann_SetActivationFunc
 	}
 
 	trainingData_ { arg trainData;

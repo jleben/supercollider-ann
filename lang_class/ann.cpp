@@ -1,7 +1,7 @@
 #include <SC_Lang_API.h>
-#include <cstdio>
 
 using namespace SC::Lang;
+using namespace std;
 
 static void initPrimitives();
 static void startup( const PluginIntf & );
@@ -23,8 +23,15 @@ DeclareLanguagePlugin( "Ann", "SuperCollider interface to FANN "
 #endif
 
 #include <fann.h>
+
 #include <assert.h>
+#include <map>
+#include <iostream>
 #include <cstring>
+#include <cstdio>
+
+typedef map<Symbol, fann_activationfunc_enum> ActFuncMap;
+typedef pair<Symbol, fann_activationfunc_enum> ActFuncId;
 
 #define GET_ANN_DATA(obj) static_cast<AnnData*>( obj[1].asRawPointer() );
 
@@ -35,24 +42,65 @@ struct AnnData {
   fann_type *runData;
 };
 
+int Ann_GetActivationFuncNames( State & );
 int Ann_Create( State &state );
+int Ann_SetActivationFunc( State &state );
 int Ann_SetTrainingData( State &state );
 int Ann_Train( State &state );
 int Ann_Run( State &state );
 int Ann_Save( State &state );
 int Ann_Finalize( State &, Object & );
 
-static Sys *lang;
-
-static void startup( const PluginIntf &intf ) { lang = new Sys(intf.system()); }
-
 static Class arrayClass;
 static Class stringClass;
+static Symbol sym_all;
+static Symbol sym_hidden;
+static Symbol sym_output;
+static Sys *lang;
+static ActFuncMap actFuncMap;
+
+#define MAP_ACT_FUNC_NAME( name ) { \
+    Symbol sym = lang->getSymbol( FANN_ACTIVATIONFUNC_NAMES[name] ); \
+    actFuncMap.insert( ActFuncId(sym, name) ); \
+    }
+
+static void startup( const PluginIntf &intf ) {
+    lang = new Sys(intf.system());
+#if 0
+    // FIXME: doesn't work, sizeof() gives 144
+    int actFuncCount = sizeof(FANN_ACTIVATIONFUNC_NAMES);
+    cout << "act func count = " << actFuncCount << endl;
+    for( int i = 0; i < actFuncCount; ++i ) {
+        const char *name = FANN_ACTIVATIONFUNC_NAMES[i];
+        if( !name ) continue;
+        Symbol sym = lang->getSymbol( name );
+        actFuncMap.insert( ActFuncId(sym, i) );
+    }
+#endif
+    MAP_ACT_FUNC_NAME( FANN_LINEAR );
+    MAP_ACT_FUNC_NAME( FANN_THRESHOLD );
+    MAP_ACT_FUNC_NAME( FANN_THRESHOLD_SYMMETRIC );
+    MAP_ACT_FUNC_NAME( FANN_SIGMOID );
+    MAP_ACT_FUNC_NAME( FANN_SIGMOID_STEPWISE );
+    MAP_ACT_FUNC_NAME( FANN_SIGMOID_SYMMETRIC );
+    MAP_ACT_FUNC_NAME( FANN_GAUSSIAN );
+    MAP_ACT_FUNC_NAME( FANN_GAUSSIAN_SYMMETRIC );
+    MAP_ACT_FUNC_NAME( FANN_ELLIOT );
+    MAP_ACT_FUNC_NAME( FANN_ELLIOT_SYMMETRIC );
+    MAP_ACT_FUNC_NAME( FANN_LINEAR_PIECE );
+    MAP_ACT_FUNC_NAME( FANN_LINEAR_PIECE_SYMMETRIC );
+    MAP_ACT_FUNC_NAME( FANN_SIN_SYMMETRIC );
+    MAP_ACT_FUNC_NAME( FANN_COS_SYMMETRIC );
+    MAP_ACT_FUNC_NAME( FANN_SIN );
+    MAP_ACT_FUNC_NAME( FANN_COS );
+}
 
 static void initPrimitives()
 {
   printf("Initializing Ann primitives.\n");
+  lang->definePrimitive<&Ann_GetActivationFuncNames>( "_Ann_GetActivationFuncNames", 0, 0 );
   lang->definePrimitive<&Ann_Create>( "_Ann_Create", 1, 0 );
+  lang->definePrimitive<&Ann_SetActivationFunc>( "_Ann_SetActivationFunc", 2, 0 );
   lang->definePrimitive<&Ann_SetTrainingData>( "_Ann_SetTrainingData", 1, 0 );
   lang->definePrimitive<&Ann_Train>( "_Ann_Train", 0, 0 );
   lang->definePrimitive<&Ann_Run>( "_Ann_Run", 2, 0 );
@@ -60,16 +108,25 @@ static void initPrimitives()
 
   arrayClass = Class( lang->getSymbol("Array") );
   stringClass = Class( lang->getSymbol("String") );
+  sym_all = lang->getSymbol("all");
+  sym_hidden = lang->getSymbol("hidden");
+  sym_output = lang->getSymbol("output");
+}
 
-#if 0
-  int base = nextPrimitiveIndex();
-  int index = 0;
-  definePrimitive( base, index++, "_Ann_Create", &Ann_Create, 2, 0 );
-  definePrimitive( base, index++, "_Ann_SetTrainingData", &Ann_SetTrainingData, 2, 0 );
-  definePrimitive( base, index++, "_Ann_Train", &Ann_Train, 1, 0 );
-  definePrimitive( base, index++, "_Ann_Run", &Ann_Run, 3, 0 );
-  definePrimitive( base, index++, "_Ann_Save", &Ann_Save, 2, 0 );
-#endif
+int Ann_GetActivationFuncNames( State &s )
+{
+    int count = actFuncMap.size();
+    Object a( lang->newArray( s, count, 0, true ) );
+    s.receiver() = a;
+
+    a.setSize( count );
+
+    ActFuncMap::iterator it;
+    int i;
+    for( i = 0, it = actFuncMap.begin(); it != actFuncMap.end(); ++i, ++it )
+        a[i] = it->first;
+
+    return errNone;
 }
 
 int Ann_Create( State &state )
@@ -110,9 +167,6 @@ int Ann_Create( State &state )
 
   delete[] layerv;
 
-  fann_set_activation_function_hidden(net, FANN_SIGMOID_SYMMETRIC);
-  fann_set_activation_function_output(net, FANN_SIGMOID_SYMMETRIC);
-
   AnnData *d = new AnnData;
   d->net = net;
   d->runData = new fann_type[fann_get_num_input(net)];
@@ -122,6 +176,37 @@ int Ann_Create( State &state )
   lang->installFinalizer<Ann_Finalize>( state, obj, 0 );
 
   return errNone;
+}
+
+int Ann_SetActivationFunc( State &state )
+{
+    AnnData *d = GET_ANN_DATA(state.receiver().asObject());
+
+    Symbol sym = state[0].toSymbol();
+    if( !sym.isValid() ) return errWrongType;
+
+    Slot layers = state[1];
+    if( !layers.isSymbol() ) return errWrongType;
+
+    ActFuncMap::iterator it = actFuncMap.find(sym);
+    if( it == actFuncMap.end() ) return errFailed;
+
+    sym = layers.asSymbol();
+    if (sym == sym_all) {
+        fann_set_activation_function_hidden( d->net, it->second );
+        fann_set_activation_function_output( d->net, it->second );
+    }
+    else if (sym == sym_hidden) {
+        fann_set_activation_function_hidden( d->net, it->second );
+    }
+    else if (sym == sym_output) {
+        fann_set_activation_function_output( d->net, it->second );
+    }
+    else {
+        return errFailed;
+    }
+
+    return errNone;
 }
 
 int Ann_Finalize( State &state, Object &obj  )
