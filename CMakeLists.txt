@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project (Ann)
 
-set( SC_PATH "/home/jakob/programming/supercollider"
+set( SC_PATH "/home/jakob/programming/supercollider-ann"
   CACHE PATH "The SuperCollider source directory."
 )
 set( FANN_PATH "/home/jakob/programming/fann-2.1.0"
