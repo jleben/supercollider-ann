@@ -1,4 +1,5 @@
 #include "pool.hpp"
+#include "plugin.hpp"
 
 #include <SC_PlugIn.h>
 
@@ -12,8 +13,6 @@ struct LoadAnnData {
 
 // global data
 
-extern InterfaceTable *ft;
-
 const int kAnnDefCount = 20;
 AnnDef * annDefs[kAnnDefCount];
 
@@ -26,6 +25,7 @@ static void loadAnnCleanup(World *, void * userData);
 
 
 static struct fann * loadFann( const char *filename );
+AnnDef * getAnnDef(unsigned int i);
 //int findAnnDef( const char *name );
 
 
@@ -38,6 +38,21 @@ void initPool() {
   }
   // define the load command
   DefinePlugInCmd("loadAnn", loadAnnCmd, 0 );
+}
+
+AnnDef * getAnnDef(unsigned int i)
+{
+  if( i < 0 || i > kAnnDefCount ) {
+    Print("ANN index out of range: %i\n", i);
+    return 0;
+  }
+
+  AnnDef *annDef = annDefs[i];
+
+  if( !annDef )
+    Print("No ANN loaded at index %i\n", i);
+
+  return annDef;
 }
 
 static void loadAnnCmd(World *w, void* userData, struct sc_msg_iter *args, void *replyAddr)

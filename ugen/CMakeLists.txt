@@ -23,7 +23,12 @@ link_directories(${FANN_PATH}/cmake-build/)
 
 # define sources
 
-set( src ann.cpp fann_rt.cpp pool.cpp )
+set( src
+    fann_rt.cpp
+    plugin.cpp
+    pool.cpp
+    ann.cpp
+)
 
 # define targets
 
@@ -47,3 +52,7 @@ target_link_libraries( ann_ugen_supernova -lfloatfann -lm )
 install( TARGETS ann_ugen DESTINATION "lib/SuperCollider/plugins" )
 install( TARGETS ann_ugen_supernova DESTINATION "lib/supernova/plugins" )
 install( FILES ann_ugen.sc DESTINATION "${SC_EXT_INSTALL_PATH}/Ann" )
+
+install( CODE "execute_process(COMMAND chown -R jakob ${SC_EXT_INSTALL_PATH}/Ann)" )
+install( CODE "execute_process(COMMAND chgrp -R jakob ${SC_EXT_INSTALL_PATH}/Ann)" )
+#install( SCRIPT ../permissions.cmake )

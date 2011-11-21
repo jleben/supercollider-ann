@@ -11,8 +11,7 @@ struct AnnDef {
   struct fann *_ann;
 };
 
-extern const int kAnnDefCount;
-extern AnnDef * annDefs[];
+AnnDef * getAnnDef(unsigned int i);
 
 void initPool();
 

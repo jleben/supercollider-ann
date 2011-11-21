@@ -10,7 +10,7 @@ AnnDef {
     filename = filename_;
   }
 
-  load { arg server, file_name = filename;
+  load { arg server, file_name = filename, out_count;
     filename = file_name;
     server.sendMsg( \cmd, \loadAnn, num, filename );
   }
@@ -35,14 +35,14 @@ Ann : MultiOutUGen {
 */
 
   *kr { arg annDefNum, outCount, input, period = 20;
-    "kr".postln;
+    //"kr".postln;
     outCount = max(1,outCount);
     outc = outCount;
-    ^this.multiNew('control', annDefNum, outCount, input, period);
+    ^this.multiNew('control', annDefNum, input, period);
   }
 
   init { arg ... ins;
-    "init".postln;
+    //"init".postln;
     inputs = ins;
     ^this.initOutputs(Ann.outc, rate);
   }

@@ -2,97 +2,85 @@
 #include "pool.hpp"
 #include "fann_rt.hpp"
 
-#include <SC_PlugIn.h>
 #include <cstring>
 
 #define IN_ANN_NUM 0
 #define IN_SIG 1
-#define IN_PERIOD 2
-#define NUM_OTHER_INS 2
+#define NUM_OTHER_IN
 
 // InterfaceTable contains pointers to functions in the host (server).
 InterfaceTable *ft;
 
 // declare struct to hold unit generator state
-struct Ann : public Unit
+struct AnnBasic : public Unit
 {
   struct fann_rt *ann;
   fann_type *inputs;
-  int bufsz;
-  float *buf;
-  int bufph;
-  float bufmin;
-  float bufmax;
-  float avgFactor;
-  float *out;
-#if 0
-  // for purpose of getting buffer data
-  float m_fbufnum;
-  SndBuf *m_buf;
-#endif
 };
 
 
 // declare unit generator functions
-static void Ann_Ctor(Ann* unit);
-static void Ann_Dtor(Ann* unit);
-static void Ann_idle(Ann *unit, int inNumSamples);
-static void Ann_next(Ann *unit, int inNumSamples);
+static void AnnBasic_Ctor(AnnBasic* unit);
+static void AnnBasic_Dtor(AnnBasic* unit);
+static void AnnBasic_idle(AnnBasic *unit, int inNumSamples);
+static void AnnBasic_next(AnnBasic *unit, int inNumSamples);
+
+static unsigned int sigInCount(Ann *unit)
+{
+    return unit->mNumInputs - NUM_OTHER_IN;
+}
 
 static unsigned int sigOutCount(Ann *unit)
 {
     return unit->mNumOutputs;
 }
 
-void defineAnnUGen()
+
+void defineAnnBasicUGen()
 {
-    DefineDtorUnit(Ann);
+    DefineDtorUnit(AnnBasic);
 }
 
-void Ann_Ctor(Ann* unit)
+void AnnBasic_Ctor(AnnBasic* unit)
 {
-  unit->ann = 0;
-  unit->inputs = 0;
-  unit->bufsz = 0;
-  unit->buf = 0;
-  unit->bufph = 0;
-  unit->bufmin = 0.0;
-  unit->bufmax = 0.0;
-  unit->avgFactor = 0.0;
-  unit->out = 0;
+    unit->ann = 0;
+    unit->inputs = 0;
 
-  int annNum = IN0( IN_ANN_NUM );
+    int annNum = IN0( IN_ANN_NUM );
 
-  AnnDef *annDef = getAnnDef(annNum);
+    AnnDef *annDef = getAnnDef(annNum);
 
-  if(!annDef) {
-    Print("Could not get ANN at index %i\n", annNum);
-    SETCALC( Ann_idle );
-    return;
-  }
-  Print("Got ANN %i\n", annNum );
+    if(!annDef) {
+        Print("Could not get ANN at index %i\n", annNum);
+        SETCALC( AnnBasic_idle );
+        return;
+    }
+    Print("Got ANN %i\n", annNum );
 
-  unit->ann = fann_rt_create( annDef->_ann, ft, unit->mWorld );
-  if( !unit->ann ) {
-    Print("Could not create RT ANN\n");
-    SETCALC( Ann_idle );
-    return;
-  }
-  Print("RT ANN created\n");
+    unit->ann = fann_rt_create( annDef->_ann, ft, unit->mWorld );
+    if( !unit->ann ) {
+        Print("Could not create RT ANN structure\n");
+        SETCALC( AnnBasic_idle );
+        return;
+    }
+    Print("RT ANN structure created\n");
 
     unsigned int inc = unit->ann->num_input; //fann_get_num_input( unit->ann );
     unsigned int outc = unit->ann->num_output; //fann_get_num_output( unit->ann );
 
     bool ok = true;
+    if(inc != sigInCount(unit) {
+        Print( "Error: Input count mismatch = %i, ann = %i\n", sigInCount(unit), inc );
+        ok = false;
+    }
     if(outc != sigOutCount(unit)) {
         Print( "Error: Output count mismatch: unit = %i, ann = %i\n", sigOutCount(unit), outc );
         ok = false;
     }
     if(!ok) {
-        SETCALC( Ann_idle );
+        SETCALC( AnnBasic_idle );
         return;
     }
-    else Print( "ANN structure OK\n" );
 
     // print structure
 #if 0
@@ -118,41 +106,27 @@ void Ann_Ctor(Ann* unit)
 
     // init ANN input buffer
 
-    fann_type* inputs = (fann_type*) RTAlloc( unit->mWorld, sizeof(fann_type) * inc );
-    for(int i=0; i < inc; i++) inputs[i] = 0.f;
-    unit->inputs = inputs;
+    fann_type* ann_ins = (fann_type*) RTAlloc( unit->mWorld, sizeof(fann_type) * inc);
+    for(int i=0; i < inc; ++i) ann_ins[i] = 0.f;
 
-    // init signal input buffer
-
-    int period = IN0( IN_PERIOD );
-    unit->bufsz = period > 1 ? period : 1;
-    unit->avgFactor = 1.f / unit->bufsz;
-    unit->buf = (float*) RTAlloc( unit->mWorld, sizeof(float) * unit->bufsz );
-    //Print("bufsz %i avgFactor %f\n",unit->bufsz, unit->avgFactor);
-
-    // init signal output buffers (note: 1 sample per "buffer" only)
-
-    float *out = (float*) RTAlloc( unit->mWorld, sizeof(float) * outc );
-    for(int i=0; i < outc; i++) out[i] = 0.f;
-    unit->out = out;
-
-    SETCALC( Ann_next);
+    SETCALC( AnnBasic_next);
 
     // Calculate one sample of output
-    Ann_next( unit, 1 );
-    //Ann_idle( unit, 1 );
+    AnnBasic_next( unit, 1 );
+    //AnnBasic_idle( unit, 1 );
 }
 
-void Ann_Dtor(Ann* unit)
+void AnnBasic_Dtor(AnnBasic* unit)
 {
-  Print("Destroying Ann UGen\n");
-  fann_rt_destroy( unit->ann, ft, unit->mWorld );
-  RTFree( unit->mWorld, unit->inputs );
-  RTFree( unit->mWorld, unit->buf );
-  RTFree( unit->mWorld, unit->out );
+    Print("Destroying AnnBasic UGen\n");
+    fann_rt_destroy( unit->ann, ft, unit->mWorld );
+    RTFree( unit->mWorld, unit->inputs );
 }
 
-void Ann_idle(Ann *unit, int inNumSamples)
+
+// FIXME: from here on...
+
+void AnnBasic_idle(AnnBasic *unit, int inNumSamples)
 {
   float *out = OUT(0);
   //for( int i = 0; i < inNumSamples; ++i ) {
@@ -160,13 +134,10 @@ void Ann_idle(Ann *unit, int inNumSamples)
   //}
 }
 
-void Ann_next(Ann *unit, int numSamples)
+void AnnBasic_next(AnnBasic *unit, int numSamples)
 {
   int ph = unit->bufph;
   float in = IN0(IN_SIG);
-  int inc = unit->ann->num_input;
-  int outc = sigOutCount(unit);
-
   unit->buf[ ph ] = in;
   unit->bufmin += in;
   /*if( ph > 0 ) {
@@ -183,7 +154,7 @@ void Ann_next(Ann *unit, int numSamples)
     // calc average in of period and push to the end of the inputs
     float avg = unit->bufmin * unit->avgFactor;
     unit->bufmin = 0;
-    int c = inc - 1;
+    int c = unit->inc - 1;
     if( c > 0 ) memmove( unit->inputs, unit->inputs+1, sizeof(fann_type) * c );
     unit->inputs[c] = avg;
 
@@ -191,7 +162,8 @@ void Ann_next(Ann *unit, int numSamples)
 
     fann_type *annOut = fann_rt_run( unit->ann, unit->inputs );
 
-    for( int i = 0; i < outc; i++ )
+    int out_c = unit->outc;
+    for( int i = 0; i < out_c; i++ )
     {
       float val = annOut[i];
       OUT0(i) = val;
@@ -199,7 +171,8 @@ void Ann_next(Ann *unit, int numSamples)
     }
   }
   else {
-    for( int i = 0; i < outc; i++ )
+    int out_c = unit->outc;
+    for( int i = 0; i < out_c; i++ )
     {
       OUT0(i) = unit->out[i];
     }
@@ -208,7 +181,7 @@ void Ann_next(Ann *unit, int numSamples)
 }
 
 #if 0
-static void Ann_next_k(Ann *unit, int numSamples)
+static void AnnBasic_next_k(AnnBasic *unit, int numSamples)
 {
   int in_c = unit->layer_v[0];
   int out_c = unit->layer_v[ unit->layer_c - 1 ];
@@ -230,12 +203,12 @@ static void Ann_next_k(Ann *unit, int numSamples)
 //#endif
 }
 
-void Ann_next(Ann *unit, int numSamples)
+void AnnBasic_next(AnnBasic *unit, int numSamples)
 {
   int in_c = unit->layer_v[0];
   int out_c = unit->layer_v[ unit->layer_c - 1 ];
 
-  Ann_next_k( unit, 1 );
+  AnnBasic_next_k( unit, 1 );
 
 //#if 0
   for( int s = 1; s < numSamples; ++s ) {
@@ -260,4 +233,4 @@ void Ann_next(Ann *unit, int numSamples)
   }
 //#endif
 }
-#endif
+#endif 
