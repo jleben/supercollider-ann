@@ -1,6 +1,5 @@
 Fann {
 	var finalizer, data;
-	var struct;
 	var trainer;
 
 	*activationFunctionNames {
@@ -10,6 +9,20 @@ Fann {
 	*new { arg ... structure;
 		^super.new.initAnn( structure );
 	}
+
+	*load { arg filename;
+		^super.new.prLoad(filename);
+	}
+
+	send { arg server, num;
+		var filename = this.prMakeFilename(num);
+		this.save(filename);
+		server.sendMsg( \cmd, \loadAnn, num, filename );
+	}
+
+	numInputs { _Ann_InputCount }
+
+	numOutputs { _Ann_OutputCount }
 
 	activationFunction_ { arg name, layers=\all; //a symbol, one of *activationFunctionNames
 		_Ann_SetActivationFunc
@@ -68,13 +81,10 @@ Fann {
 		^this.primitiveFailed;
 	}
 
-	layers { ^struct.copy }
-
 // PRIVATE
 
 	initAnn { arg structure;
 		this.prCreateAnn( structure );
-		struct = structure;
 	}
 
 	prCreateAnn { arg structure;
@@ -87,5 +97,12 @@ Fann {
 		^this.primitiveFailed;
 	}
 
+	prLoad { arg filename;
+		_Ann_Load
+		^this.primitiveFailed
+	}
 
+	*prMakeFilename { arg num;
+		^"/home/jakob/.local/share/SuperCollider/ann_defs" +/+ "ann_def_" ++ num.asString
+	}
 }

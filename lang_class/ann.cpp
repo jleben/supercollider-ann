@@ -44,6 +44,9 @@ struct AnnData {
 
 int Ann_GetActivationFuncNames( State & );
 int Ann_Create( State &state );
+int Ann_Load( State &state );
+int Ann_InputCount( State &state );
+int Ann_OutputCount( State &state );
 int Ann_SetActivationFunc( State &state );
 int Ann_SetTrainingData( State &state );
 int Ann_Train( State &state );
@@ -100,6 +103,9 @@ static void initPrimitives()
   printf("Initializing Ann primitives.\n");
   lang->definePrimitive<&Ann_GetActivationFuncNames>( "_Ann_GetActivationFuncNames", 0, 0 );
   lang->definePrimitive<&Ann_Create>( "_Ann_Create", 1, 0 );
+  lang->definePrimitive<&Ann_Load>( "_Ann_Load", 1, 0 );
+  lang->definePrimitive<&Ann_InputCount>( "_Ann_InputCount", 0, 0 );
+  lang->definePrimitive<&Ann_OutputCount>( "_Ann_OutputCount", 0, 0 );
   lang->definePrimitive<&Ann_SetActivationFunc>( "_Ann_SetActivationFunc", 2, 0 );
   lang->definePrimitive<&Ann_SetTrainingData>( "_Ann_SetTrainingData", 1, 0 );
   lang->definePrimitive<&Ann_Train>( "_Ann_Train", 0, 0 );
@@ -176,6 +182,47 @@ int Ann_Create( State &state )
   lang->installFinalizer<Ann_Finalize>( state, obj, 0 );
 
   return errNone;
+}
+
+int Ann_Load( State &state )
+{
+    Object obj( state.receiver().asObject());
+
+    // assert it is new, e.g. finalizer and data don't exist
+    assert( obj[0].isNil() && obj[1].isNil() );
+
+    String str( state[0].toString() );
+
+    if( !str.isValid() ) return errWrongType;
+
+    std::string std_str( str.stdString() );
+    printf( "Loading Ann from: %s\n", std_str.c_str() );
+    struct fann *net = fann_create_from_file( std_str.c_str() );
+    if(!net) return errFailed;
+
+    AnnData *d = new AnnData;
+    d->net = net;
+    d->runData = new fann_type[fann_get_num_input(net)];
+
+    obj[1].setRawPointer( d );
+
+    lang->installFinalizer<Ann_Finalize>( state, obj, 0 );
+
+    return errNone;
+}
+
+int Ann_InputCount( State &state )
+{
+    AnnData *d = GET_ANN_DATA(state.receiver().asObject());
+    state.receiver() = (int)fann_get_num_input(d->net);
+    return errNone;
+}
+
+int Ann_OutputCount( State &state )
+{
+    AnnData *d = GET_ANN_DATA(state.receiver().asObject());
+    state.receiver() = (int)fann_get_num_output(d->net);
+    return errNone;
 }
 
 int Ann_SetActivationFunc( State &state )
@@ -403,18 +450,14 @@ int Ann_Run( State &state )
 int Ann_Save( State &state )
 {
   Slot sFile = state[0];
-  if( !sFile.isKindOf( stringClass) ) return errWrongType;
-  String str = sFile.asString();
+  String str = sFile.toString();
+  if( !sFile.isValid() ) return errWrongType;
 
-  /*
-  char cstr[str.size()+1];
-  cstr[0] = '\0';
-  strncat( cstr, str->s, str->size );
-*/
-  printf( "Saving Ann to: %s\n", str.c_str() );
+  std::string std_str( str.stdString() );
+  printf( "Saving Ann to: %s\n", std_str.c_str() );
 
   AnnData *d = GET_ANN_DATA(state.receiver().asObject());
-  if( fann_save( d->net, str.c_str() ) ) return errFailed;
+  if( fann_save( d->net, std_str.c_str() ) ) return errFailed;
 
   return errNone;
 }
