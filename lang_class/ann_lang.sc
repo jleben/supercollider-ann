@@ -1,6 +1,16 @@
 Fann {
+	classvar serverIdAllocator;
+
 	var finalizer, data;
 	var trainer;
+
+	*initClass {
+		Class.initClassTree(StackNumberAllocator);
+		serverIdAllocator = StackNumberAllocator(0,199);
+	}
+
+	*allocId { ^serverIdAllocator.alloc; }
+	*freeId { arg id; ^serverIdAllocator.free(id); }
 
 	*activationFunctionNames {
 		_Ann_GetActivationFuncNames
@@ -14,11 +24,11 @@ Fann {
 		^super.new.prLoad(filename);
 	}
 
-	send { arg server, num;
-		var filename = this.prMakeFilename(num);
-		this.save(filename);
-		server.sendMsg( \cmd, \loadAnn, num, filename );
-	}
+    send { arg num, server = Server.default();
+        var filename = Fann.prMakeFilename(num);
+        this.save(filename);
+        server.sendMsg( "/cmd", \loadAnn, num, filename );
+    }
 
 	numInputs { _Ann_InputCount }
 
