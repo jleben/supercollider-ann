@@ -47,31 +47,30 @@ Fann {
 		^this.primitiveFailed;
 	}
 
-	train { arg finalMSE = 0.01, period = 10;
+	train { arg finalMSE = 0.01, period = 10, maxEpochs;
 		var mse;
 		var count;
-		var iter = 0;
+		var iter;
 
 		period = max(period,1);
 
-		trainer = {
-			mse = this.trainOneEpoch;
-			while { mse > finalMSE} {
-				(iter.asString ++ ": " ++ mse.asString).postln;
-				count = period;
-				while {
-					(mse > finalMSE) && (count > 0);
-				}{
-					mse = this.trainOneEpoch;
-					count = count - 1;
-					iter = iter + 1;
-				};
-				if( mse > finalMSE ) {0.yield};
-			};
-			(iter.asString ++ ": " ++ mse.asString).postln;
-			"done".postln;
-			trainer = nil;
-		}.fork(AppClock);
+        trainer = {
+            mse = this.trainOneEpoch;
+            iter = 1;
+            count = period - 1;
+            while { (mse > finalMSE) and: (maxEpochs.isNil or: {iter < maxEpochs}) } {
+                if( count <= 0 ) {
+                    (iter.asString ++ ": " ++ mse.asString).postln;
+                    count = period;
+                    0.yield;
+                };
+                mse = this.trainOneEpoch;
+                count = count - 1;
+                iter = iter + 1;
+            };
+            (iter.asString ++ ": " ++ mse.asString).postln;
+            if( mse <= finalMSE ) {"done".postln} {"failed".postln};
+        }.fork(AppClock);
 	}
 
 	stop {
@@ -90,6 +89,8 @@ Fann {
 		_Ann_Save
 		^this.primitiveFailed;
 	}
+
+    reset { _Ann_Reset }
 
 // PRIVATE
 

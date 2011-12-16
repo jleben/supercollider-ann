@@ -52,6 +52,7 @@ int Ann_SetTrainingData( State &state );
 int Ann_Train( State &state );
 int Ann_Run( State &state );
 int Ann_Save( State &state );
+int Ann_Reset( State & );
 int Ann_Finalize( State &, Object & );
 
 static Class arrayClass;
@@ -111,6 +112,7 @@ static void initPrimitives()
   lang->definePrimitive<&Ann_Train>( "_Ann_Train", 0, 0 );
   lang->definePrimitive<&Ann_Run>( "_Ann_Run", 2, 0 );
   lang->definePrimitive<&Ann_Save>( "_Ann_Save", 1, 0 );
+  lang->definePrimitive<&Ann_Reset>( "_Ann_Reset", 0, 0 );
 
   arrayClass = Class( lang->getSymbol("Array") );
   stringClass = Class( lang->getSymbol("String") );
@@ -459,5 +461,12 @@ int Ann_Save( State &state )
   AnnData *d = GET_ANN_DATA(state.receiver().asObject());
   if( fann_save( d->net, std_str.c_str() ) ) return errFailed;
 
+  return errNone;
+}
+
+int Ann_Reset( State &state )
+{
+  AnnData *d = GET_ANN_DATA(state.receiver().asObject());
+  fann_randomize_weights( d->net, -1.0, 1.0 );
   return errNone;
 }
