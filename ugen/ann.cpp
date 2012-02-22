@@ -10,9 +10,6 @@
 #define IN_PERIOD 2
 #define NUM_OTHER_INS 2
 
-// InterfaceTable contains pointers to functions in the host (server).
-InterfaceTable *ft;
-
 // declare struct to hold unit generator state
 struct Ann : public Unit
 {

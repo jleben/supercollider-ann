@@ -13,7 +13,7 @@ struct LoadAnnData {
 
 // global data
 
-const int kAnnDefCount = 20;
+const int kAnnDefCount = 200;
 AnnDef * annDefs[kAnnDefCount];
 
 // function declarations
@@ -42,23 +42,16 @@ void initPool() {
 
 AnnDef * getAnnDef(unsigned int i)
 {
-  if( i < 0 || i > kAnnDefCount ) {
-    Print("ANN index out of range: %i\n", i);
-    return 0;
-  }
+    if( i < 0 || i > kAnnDefCount )
+        return 0;
 
-  AnnDef *annDef = annDefs[i];
+    AnnDef *annDef = annDefs[i];
 
-  if( !annDef )
-    Print("No ANN loaded at index %i\n", i);
-
-  return annDef;
+    return annDef;
 }
 
 static void loadAnnCmd(World *w, void* userData, struct sc_msg_iter *args, void *replyAddr)
 {
-  Print( "loadAnnFunc\n" );
-
   // parse args
   int id = args->geti(-1);
   if( id < 0 || id > kAnnDefCount ) return;
@@ -89,7 +82,7 @@ static bool loadAnnCmd2(World *, void * userData )
 {
   LoadAnnData *data = static_cast<LoadAnnData*>(userData);
 
-  Print( "Loading Fann file: %s\n", data->filename );
+  Print( "Loading Fann index %i, file '%s'\n", data->id, data->filename );
 
   delete data->annDef;
   data->annDef = 0;
@@ -104,7 +97,7 @@ static bool loadAnnCmd2(World *, void * userData )
 static bool loadAnnCmd3(World *, void * userData )
 {
   LoadAnnData *data = static_cast<LoadAnnData*>(userData);
-  Print( "Storing AnnDef into index %i\n", data->id );
+  //Print( "Storing AnnDef into index %i\n", data->id );
   annDefs[data->id] = data->annDef;
 
   return true;
@@ -112,7 +105,7 @@ static bool loadAnnCmd3(World *, void * userData )
 
 static void loadAnnCleanup(World *w, void * userData)
 {
-  Print( "Cleaning up load cmd.\n", static_cast<LoadAnnData*>(userData)->id );
+  //Print( "Cleaning up load cmd.\n", static_cast<LoadAnnData*>(userData)->id );
   RTFree( w, userData );
 }
 

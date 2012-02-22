@@ -6,5 +6,6 @@
 extern InterfaceTable *ft;
 void defineAnnUGen();
 void defineAnnBasicUGen();
+void defineAnnAutoTrainerUGen();
 
 #endif // ANN_PLUGIN_HPP

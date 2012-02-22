@@ -87,4 +87,11 @@ void fann_rt_destroy( struct fann_rt *ann, InterfaceTable *ft, World *w );
 
 fann_type * fann_rt_run(struct fann_rt * ann, fann_type * input);
 
+struct fann_train_data * fann_rt_create_train(
+    unsigned int num_data, unsigned int num_input, unsigned int num_output,
+    InterfaceTable *ft, World *w
+);
+
+void fann_rt_destroy_train( struct fann_train_data *, InterfaceTable *ft, World *w );
+
 #endif // __fann_rt_h__

@@ -19,7 +19,7 @@ add_definitions("-DNOVA_SIMD")
 
 include_directories(${FANN_PATH}/src/include)
 
-link_directories(${FANN_PATH}/cmake-build/)
+link_directories(${FANN_PATH}/build/)
 
 # define sources
 
@@ -28,6 +28,8 @@ set( src
     plugin.cpp
     pool.cpp
     ann.cpp
+    ugen_basic.cpp
+    ugen_autoasoc_trainer.cpp
 )
 
 # define targets

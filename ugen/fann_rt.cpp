@@ -15,6 +15,8 @@ static struct fann_rt * fann_rt_alloc( InterfaceTable *ft, World *w );
 
 void fann_rt_destroy( struct fann_rt *ann, InterfaceTable *ft, World *w );
 
+void fann_rt_destroy_train( struct fann_train_data *, InterfaceTable *ft, World *w );
+
 struct fann_rt *fann_rt_create( struct fann *ann, InterfaceTable *ft, World *w )
 {
 #if 0
@@ -315,6 +317,86 @@ FANN_EXTERNAL fann_type *FANN_API fann_rt_run(struct fann_rt * ann, fann_type * 
         output[i] = neurons[i].value;
     }
     return ann->output;
+}
+
+struct fann_train_data * fann_rt_create_train (
+    unsigned int num_data, unsigned int num_input, unsigned int num_output,
+    InterfaceTable *ft, World *w )
+{
+    unsigned int i;
+    fann_type *data_input, *data_output;
+
+    struct fann_train_data *data = (struct fann_train_data *)
+        RTAlloc( w, sizeof( struct fann_train_data ) );
+
+    data->input = 0;
+    data->output = 0;
+
+    if(data == NULL){
+        Print("Ann: Could not allocate training data\n");
+        return NULL;
+    }
+
+    fann_init_error_data((struct fann_error *) data);
+
+    data->num_data = num_data;
+    data->num_input = num_input;
+    data->num_output = num_output;
+
+    data->input = (fann_type **) RTAlloc(w, num_data * sizeof(fann_type *));
+    if(data->input == NULL)
+    {
+        Print("Ann: Could not allocate training data\n");
+        fann_rt_destroy_train(data, ft, w);
+        return NULL;
+    }
+    data->input[0] = NULL; // prevent faulty free
+
+    data->output = (fann_type **) RTAlloc(w, num_data * sizeof(fann_type *));
+    if(data->output == NULL)
+    {
+        Print("Ann: Could not allocate training data\n");
+        fann_rt_destroy_train(data, ft, w);
+        return NULL;
+    }
+    data->output[0] = NULL; // prevent faulty free
+
+    data_input = (fann_type *) RTAlloc(w, num_input * num_data * sizeof(fann_type));
+    if(data_input == NULL)
+    {
+        Print("Ann: Could not allocate training data\n");
+        fann_rt_destroy_train(data, ft, w);
+        return NULL;
+    }
+
+    data_output = (fann_type *) RTAlloc(w, num_output * num_data * sizeof(fann_type));
+    if(data_output == NULL)
+    {
+        Print("Ann: Could not allocate training data\n");
+        fann_rt_destroy_train(data, ft, w);
+        return NULL;
+    }
+
+    for( i = 0; i != num_data; i++)
+    {
+        data->input[i] = data_input;
+        data_input += num_input;
+
+        data->output[i] = data_output;
+        data_output += num_output;
+    }
+
+    return data;
+}
+
+void fann_rt_destroy_train( struct fann_train_data *data, InterfaceTable *ft, World *w )
+{
+    if( data->input )
+        RTFree( w, data->input[0] );
+    if( data->output )
+        RTFree( w, data->output[0] );
+    RTFree( w, data->input );
+    RTFree( w, data->output );
 }
 
 #endif // !FIXEDFANN
