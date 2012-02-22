@@ -47,7 +47,7 @@ Fann {
 		^this.primitiveFailed;
 	}
 
-	train { arg finalMSE = 0.01, period = 10, maxEpochs;
+	train { arg finalMSE = 0.01, period = 10, maxEpochs, action;
 		var mse;
 		var count;
 		var iter;
@@ -69,7 +69,7 @@ Fann {
                 iter = iter + 1;
             };
             (iter.asString ++ ": " ++ mse.asString).postln;
-            if( mse <= finalMSE ) {"done".postln} {"failed".postln};
+            if( mse <= finalMSE ) {"done".postln; action.value} {"failed".postln};
         }.fork(AppClock);
 	}
 
