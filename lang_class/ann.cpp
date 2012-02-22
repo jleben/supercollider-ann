@@ -267,6 +267,7 @@ int Ann_Finalize( State &state, Object &obj  )
 }
 
 static Object gTrainDataArray;
+static bool gTrainDataOK;
 
 static void Ann_PutTrainData ( unsigned int i, unsigned int inc, unsigned int outc, fann_type *inv, fann_type *outv )
 {
@@ -276,11 +277,13 @@ static void Ann_PutTrainData ( unsigned int i, unsigned int inc, unsigned int ou
   Slot s = data[i];
   if( !s.isObject() || !s.isKindOf(arrayClass) ) {
     printf("Ann: training data set @%i not an Array!\n", i);
+    gTrainDataOK = false;
     return;
   }
   Object set = s.asObject();
   if( set.size() < inc + outc ) {
     printf("Ann: training data set @%i has too few elements\n", i);
+    gTrainDataOK = false;
     return;
   }
 
@@ -292,7 +295,8 @@ static void Ann_PutTrainData ( unsigned int i, unsigned int inc, unsigned int ou
     double val = set[j].toDouble(&ok);
     if( !ok ) {
       printf("Ann: wrong type in input training data @%i@%i\n", i, j);
-      continue;
+      gTrainDataOK = false;
+      return;
     }
     inv[j] = val;
     //post("%f ", val );
@@ -305,7 +309,8 @@ static void Ann_PutTrainData ( unsigned int i, unsigned int inc, unsigned int ou
     double val = set[j].toDouble(&ok);
     if( !ok ) {
       printf("Ann: wrong type in input training data @%i@%i\n", i, j);
-      continue;
+      gTrainDataOK = false;
+      return;
     }
     outv[j-inc] = val;
     //post("%f ", val );
@@ -368,16 +373,21 @@ int Ann_SetTrainingData( State &state )
 
   AnnData *d = GET_ANN_DATA(state.receiver().asObject());
 
-  fann_destroy_train( d->trainData );
-
   int count = dataSets.size();
   gTrainDataArray = dataSets;
+  gTrainDataOK = true;
   struct fann_train_data *td =
     fann_create_train_from_callback( dataSets.size(),
                                      fann_get_num_input(d->net),
                                      fann_get_num_output(d->net),
                                      &Ann_PutTrainData );
 
+  if(!gTrainDataOK) {
+    fann_destroy_train(td);
+    return errWrongType;
+  }
+
+  fann_destroy_train( d->trainData );
   d->trainData = td;
 
   return errNone;
