@@ -28,6 +28,7 @@ set( src
     plugin.cpp
     pool.cpp
     ugen_basic.cpp
+    ugen_time.cpp
     ugen_autoasoc_trainer.cpp
 )
 

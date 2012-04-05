@@ -10,7 +10,9 @@ PluginLoad(Ann)
     ft = inTable;
 
     initPool();
+
     defineAnnBasicUGen();
+    defineAnnTimeUGen();
     defineAnnAutoTrainerUGen();
 }
 

@@ -10,6 +10,16 @@ AnnBasic : MultiOutUGen {
   }
 }
 
+AnnTime : UGen {
+  *ar { arg annDefNum, winSize, in;
+    ^this.multiNew('audio', annDefNum, winSize, in);
+  }
+
+  *kr { arg annDefNum, winSize, in;
+    ^this.multiNew('control', annDefNum, winSize, in);
+  }
+}
+
 AnnAutoTrainer : UGen {
   *kr { arg annDefNum, inputs, train=0, numSets=20, desiredMSE=0.01;
     ^this.multiNewList(['control', annDefNum] ++ inputs ++ [train, numSets, desiredMSE]);

@@ -6,5 +6,6 @@
 extern InterfaceTable *ft;
 void defineAnnBasicUGen();
 void defineAnnAutoTrainerUGen();
+void defineAnnTimeUGen();
 
 #endif // ANN_PLUGIN_HPP
