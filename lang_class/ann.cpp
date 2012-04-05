@@ -47,6 +47,8 @@ int Ann_Create( State &state );
 int Ann_Load( State &state );
 int Ann_InputCount( State &state );
 int Ann_OutputCount( State &state );
+int Ann_GetWeights( State &state );
+int Ann_SetWeights( State &state );
 int Ann_SetActivationFunc( State &state );
 int Ann_SetTrainingData( State &state );
 int Ann_Train( State &state );
@@ -107,6 +109,8 @@ static void initPrimitives()
   lang->definePrimitive<&Ann_Load>( "_Ann_Load", 1, 0 );
   lang->definePrimitive<&Ann_InputCount>( "_Ann_InputCount", 0, 0 );
   lang->definePrimitive<&Ann_OutputCount>( "_Ann_OutputCount", 0, 0 );
+  lang->definePrimitive<&Ann_GetWeights>( "_Ann_GetWeights", 0, 0 );
+  lang->definePrimitive<&Ann_SetWeights>( "_Ann_SetWeights", 1, 0 );
   lang->definePrimitive<&Ann_SetActivationFunc>( "_Ann_SetActivationFunc", 2, 0 );
   lang->definePrimitive<&Ann_SetTrainingData>( "_Ann_SetTrainingData", 1, 0 );
   lang->definePrimitive<&Ann_Train>( "_Ann_Train", 0, 0 );
@@ -224,6 +228,60 @@ int Ann_OutputCount( State &state )
 {
     AnnData *d = GET_ANN_DATA(state.receiver().asObject());
     state.receiver() = (int)fann_get_num_output(d->net);
+    return errNone;
+}
+
+int Ann_GetWeights( State &state )
+{
+    AnnData *d = GET_ANN_DATA(state.receiver().asObject());
+
+    int n_conns = fann_get_total_connections(d->net);
+    struct fann_connection *conns = new struct fann_connection [n_conns];
+    fann_get_connection_array( d->net, conns );
+
+    Object arr( lang->newArray( state, n_conns, 0, true ) );
+    state.receiver() = arr;
+    arr.setSize( n_conns );
+    for( int i = 0; i < n_conns; ++i )
+        arr[i] = (double) conns[i].weight;
+
+    delete conns;
+
+    return errNone;
+}
+
+int Ann_SetWeights( State &state )
+{
+    AnnData *d = GET_ANN_DATA(state.receiver().asObject());
+
+    int n_conns = fann_get_total_connections(d->net);
+
+    Slot sWeights = state[0];
+    if( !sWeights.isKindOf( arrayClass ) ) return errWrongType;
+    Object arrWeights = sWeights.toObject();
+    if( arrWeights.size() != n_conns ) {
+        printf("Ann: wrong size of weights array\n");
+        return errFailed;
+    }
+
+    struct fann_connection *conns = new struct fann_connection [n_conns];
+    fann_get_connection_array( d->net, conns );
+
+    bool ok;
+    for( int i = 0; i < n_conns; ++i ) {
+        double weight = arrWeights[i].toDouble(&ok);
+        if(!ok) {
+            printf("Ann: a weight is not a float.\n");
+            delete conns;
+            return errWrongType;
+        }
+        conns[i].weight = weight;
+    }
+
+    fann_set_weight_array( d->net, conns, n_conns );
+
+    delete conns;
+
     return errNone;
 }
 

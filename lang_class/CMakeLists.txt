@@ -15,12 +15,18 @@ set(CMAKE_SHARED_MODULE_PREFIX "")
 
 # target
 
+set( sc_files
+    ann_lang.sc
+    ann_mapper.sc
+    node.sc
+)
+
 add_library( ann_lang MODULE ann.cpp )
 
 target_link_libraries( ann_lang -lfloatfann )
 
 install( TARGETS ann_lang DESTINATION "lib/SuperCollider/lang_plugins" )
-install( FILES ann_lang.sc DESTINATION "${SC_EXT_INSTALL_PATH}/Ann" )
+install( FILES ${sc_files} DESTINATION "${SC_EXT_INSTALL_PATH}/Ann" )
 
 install( CODE "execute_process(COMMAND chown -R jakob ${SC_EXT_INSTALL_PATH}/Ann)" )
 install( CODE "execute_process(COMMAND chgrp -R jakob ${SC_EXT_INSTALL_PATH}/Ann)" )

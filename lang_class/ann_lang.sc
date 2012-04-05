@@ -34,8 +34,16 @@ Fann {
 
 	numOutputs { _Ann_OutputCount }
 
+    weights { _Ann_GetWeights }
+
+    weights_ { arg weightArray;
+        _Ann_SetWeights
+        ^this.primitiveFailed;
+    }
+
 	activationFunction_ { arg name, layers=\all; //a symbol, one of *activationFunctionNames
 		_Ann_SetActivationFunc
+        ^this.primitiveFailed;
 	}
 
 	trainingData_ { arg trainData;
