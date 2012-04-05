@@ -4,7 +4,6 @@
 #include <SC_PlugIn.h>
 
 extern InterfaceTable *ft;
-void defineAnnUGen();
 void defineAnnBasicUGen();
 void defineAnnAutoTrainerUGen();
 

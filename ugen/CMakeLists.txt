@@ -27,7 +27,6 @@ set( src
     fann_rt.cpp
     plugin.cpp
     pool.cpp
-    ann.cpp
     ugen_basic.cpp
     ugen_autoasoc_trainer.cpp
 )
