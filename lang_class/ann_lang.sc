@@ -77,7 +77,9 @@ Fann {
                 iter = iter + 1;
             };
             (iter.asString ++ ": " ++ mse.asString).postln;
-            if( mse <= finalMSE ) {"done".postln; action.value} {"failed".postln};
+            if( mse <= finalMSE )
+                {"done".postln; action.value(true)}
+                {"failed".postln; action.value(false)};
         }.fork(AppClock);
 	}
 
