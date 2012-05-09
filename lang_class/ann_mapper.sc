@@ -7,8 +7,18 @@ AnnMapper {
         ^super.new.initAnnMapper(layers);
     }
 
+    *load { arg filename;
+        ^super.new.initLoadAnn(filename);
+    }
+
     initAnnMapper { arg layers;
         ann = Fann(*layers);
+        n_in = ann.numInputs;
+        n_out = ann.numOutputs;
+    }
+
+    initLoadAnn { arg file;
+        ann = Fann.load(file);
         n_in = ann.numInputs;
         n_out = ann.numOutputs;
     }
